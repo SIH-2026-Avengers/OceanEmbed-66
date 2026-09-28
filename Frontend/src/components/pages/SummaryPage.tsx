@@ -14,8 +14,8 @@ import {
 } from 'lucide-react';
 
 export const SummaryPage: React.FC = () => {
-  const { selectedLocation, predictionData } = useOcean();
-  const summary = generateSummary(predictionData, selectedLocation);
+  const { selectedLocation, predictionData, isDemoMode } = useOcean();
+  const summary = generateSummary(predictionData, selectedLocation, isDemoMode ? '°C' : 'unscaled model units');
 
   const [downloading, setDownloading] = useState<string | null>(null);
 
@@ -58,7 +58,7 @@ export const SummaryPage: React.FC = () => {
           </div>
           <div>
             <div className="text-xs text-slate-400 uppercase font-mono">RMSE</div>
-            <div className="text-2xl font-extrabold text-white font-mono">{summary.rmse} °C</div>
+            <div className="text-2xl font-extrabold text-white font-mono">{summary.rmse == null ? 'N/A' : `${summary.rmse} °C`}</div>
           </div>
         </div>
 
@@ -69,7 +69,7 @@ export const SummaryPage: React.FC = () => {
           </div>
           <div>
             <div className="text-xs text-slate-400 uppercase font-mono">MAE</div>
-            <div className="text-2xl font-extrabold text-white font-mono">{summary.mae} °C</div>
+            <div className="text-2xl font-extrabold text-white font-mono">{summary.mae == null ? 'N/A' : `${summary.mae} °C`}</div>
           </div>
         </div>
 
@@ -80,7 +80,7 @@ export const SummaryPage: React.FC = () => {
           </div>
           <div>
             <div className="text-xs text-slate-400 uppercase font-mono">R² Score</div>
-            <div className="text-2xl font-extrabold text-white font-mono">{summary.r2}</div>
+            <div className="text-2xl font-extrabold text-white font-mono">{summary.r2 ?? 'N/A'}</div>
           </div>
         </div>
 
@@ -90,15 +90,16 @@ export const SummaryPage: React.FC = () => {
             <ShieldCheck className="w-6 h-6" />
           </div>
           <div>
-            <div className="text-xs text-slate-400 uppercase font-mono">Accuracy</div>
-            <div className="text-2xl font-extrabold text-white font-mono">94.2 %</div>
+            <div className="text-xs text-slate-400 uppercase font-mono">Model Confidence</div>
+            <div className="text-2xl font-extrabold text-white font-mono">{summary.confidence == null ? 'Not provided' : `${summary.confidence} %`}</div>
           </div>
         </div>
 
       </div>
 
-      {/* ARGO Benchmark 3-Panel Maps Comparison (500 m Depth) */}
-      <div className="ocean-card p-5 space-y-4">
+      {/* Demo-only illustrative comparison panels */}
+      <div className={`ocean-card p-5 space-y-4 ${isDemoMode ? '' : 'hidden'}`}>
+        <p className="text-xs text-amber-300">Demo-only illustrative panels. They are not measured ARGO observations or model output maps.</p>
         
         {/* 3 Map Comparison Panels */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -106,7 +107,7 @@ export const SummaryPage: React.FC = () => {
           {/* Panel 1: ARGO Observed (500 m) */}
           <div className="space-y-2">
             <div className="text-xs font-bold text-slate-300">
-              ARGO Observed (500 m)
+              Demo reference (500 m)
             </div>
             
             <div className="h-44 rounded-xl bg-[#050814] overflow-hidden relative border border-cyan-500/30 group">
@@ -114,7 +115,7 @@ export const SummaryPage: React.FC = () => {
               <div className="absolute inset-0 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px] opacity-25" />
               <div className="absolute inset-0 flex items-center justify-center">
                 <span className="text-xs font-mono font-bold text-white bg-slate-950/80 px-3 py-1 rounded-lg border border-cyan-500/40 shadow-xl">
-                  In-situ Float Field (500m)
+                  Illustrative field (500m)
                 </span>
               </div>
             </div>
@@ -135,7 +136,7 @@ export const SummaryPage: React.FC = () => {
           {/* Panel 2: OceanEmbed Prediction (500 m) */}
           <div className="space-y-2">
             <div className="text-xs font-bold text-cyan-300">
-              OceanEmbed Prediction (500 m)
+              Demo prediction (500 m)
             </div>
 
             <div className="h-44 rounded-xl bg-[#050814] overflow-hidden relative border border-cyan-400/50 shadow-[0_0_15px_rgba(0,240,255,0.15)] group">
@@ -143,7 +144,7 @@ export const SummaryPage: React.FC = () => {
               <div className="absolute inset-0 bg-[radial-gradient(#00f0ff_1px,transparent_1px)] [background-size:16px_16px] opacity-30" />
               <div className="absolute inset-0 flex items-center justify-center">
                 <span className="text-xs font-mono font-bold text-cyan-300 bg-slate-950/90 px-3 py-1 rounded-lg border border-cyan-400 shadow-xl">
-                  AI Model Output (500m)
+                  Illustrative field (500m)
                 </span>
               </div>
             </div>
@@ -164,7 +165,7 @@ export const SummaryPage: React.FC = () => {
           {/* Panel 3: Prediction Error (500 m) */}
           <div className="space-y-2">
             <div className="text-xs font-bold text-amber-300">
-              Prediction Error (500 m)
+              Demo residual (500 m)
             </div>
 
             <div className="h-44 rounded-xl bg-[#050814] overflow-hidden relative border border-amber-500/30 group">
@@ -172,7 +173,7 @@ export const SummaryPage: React.FC = () => {
               <div className="absolute inset-0 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px] opacity-20" />
               <div className="absolute inset-0 flex items-center justify-center">
                 <span className="text-xs font-mono font-bold text-amber-300 bg-slate-950/90 px-3 py-1 rounded-lg border border-amber-500/40 shadow-xl">
-                  Error ΔT Grid (500m)
+                  Illustrative residual (500m)
                 </span>
               </div>
             </div>
@@ -196,6 +197,11 @@ export const SummaryPage: React.FC = () => {
         </div>
 
       </div>
+      {!isDemoMode && (
+        <div className="ocean-card p-5 text-sm text-slate-300">
+          ARGO comparison maps and validation scores are unavailable until matching reference observations are connected.
+        </div>
+      )}
 
       {/* Bottom Grid: Key Insights & Download Results */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
@@ -209,30 +215,17 @@ export const SummaryPage: React.FC = () => {
               </div>
 
               <div className="space-y-3 pt-3">
-                <div className="flex items-start space-x-3 text-xs text-slate-300">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Accurate reconstruction of subsurface temperature using only satellite surface observations.</span>
-                </div>
-
-                <div className="flex items-start space-x-3 text-xs text-slate-300">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>High agreement with ARGO float measurements.</span>
-                </div>
-
-                <div className="flex items-start space-x-3 text-xs text-slate-300">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Better performance in open ocean regions; higher error near coastal and dynamic regions.</span>
-                </div>
-
-                <div className="flex items-start space-x-3 text-xs text-slate-300">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Useful for climate monitoring, marine heatwave detection, and ocean circulation studies.</span>
-                </div>
+                {summary.keyInsights.map((insight) => (
+                  <div key={insight} className="flex items-start space-x-3 text-xs text-slate-300">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <span>{insight}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
             <div className="text-[11px] text-cyan-400/80 font-mono italic pt-3 border-t border-cyan-500/10">
-              Verified by Ministry of Earth Sciences (MoES) Benchmark Suite.
+              {isDemoMode ? 'Illustrative demo values; no external benchmark is loaded.' : 'Model output only; no external benchmark is loaded.'}
             </div>
           </div>
         </div>

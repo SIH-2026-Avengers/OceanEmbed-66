@@ -27,10 +27,13 @@ import {
 export const PredictionPage: React.FC = () => {
   const {
     currentLocation,
+    modelInputs,
+    isDemoMode,
     predictionData,
     isPredicting,
     predictionStep,
     predictionMessage,
+    predictionError,
     runPrediction,
     selectedDepth,
     setSelectedDepth,
@@ -40,14 +43,13 @@ export const PredictionPage: React.FC = () => {
 
   // Input features list
   const inputFeatures = [
-    { label: 'SST (Sea Surface Temp)', value: `${currentLocation.surfaceTemp} °C` },
-    { label: 'SSS (Sea Surface Salinity)', value: `${currentLocation.sss} PSU` },
-    { label: 'SSH (Sea Surface Height)', value: `${currentLocation.ssh} m` },
-    { label: 'Chlorophyll-a', value: `${currentLocation.chlorophyll} mg/m³` },
-    { label: 'Wind Speed', value: `${currentLocation.windSpeed} m/s` },
-    { label: 'Latitude', value: `${currentLocation.latitude}° N` },
-    { label: 'Longitude', value: `${currentLocation.longitude}° E` },
-    { label: 'Observation Date', value: new Date().toISOString().split('T')[0] },
+    { label: 'analysed_sst', value: `${modelInputs.analysed_sst} °C` },
+    { label: 'sos', value: `${modelInputs.sos} PSU` },
+    { label: 'sla', value: `${modelInputs.sla} m` },
+    { label: 'u', value: `${modelInputs.u} m/s` },
+    { label: 'v', value: `${modelInputs.v} m/s` },
+    { label: 'uwnd', value: `${modelInputs.uwnd} m/s` },
+    { label: 'vwnd', value: `${modelInputs.vwnd} m/s` },
   ];
 
   const pipelineSteps = [
@@ -189,9 +191,15 @@ export const PredictionPage: React.FC = () => {
             Input Satellite Observation Features
           </span>
           <span className="text-[10px] font-mono text-slate-400">
-            8 Parameters Passed to Model
+            7 model channels (constant-grid prototype)
           </span>
         </div>
+
+        {!isDemoMode && (
+          <p className="text-xs text-amber-300">
+            Prototype inputs are repeated across the 68 × 80 grid. Training normalization and output-channel depth mapping still need confirmation; live metrics require reference observations.
+          </p>
+        )}
 
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 pt-1">
           {inputFeatures.map((f) => (
@@ -227,6 +235,7 @@ export const PredictionPage: React.FC = () => {
             >
               Thermocline Profile (Graph)
             </button>
+            {predictionError && <p role="alert" className="text-xs text-red-300 sm:ml-4">{predictionError}</p>}
             <button
               onClick={() => setActiveTab('table')}
               className={`px-3 py-1 rounded text-xs font-medium transition-all ${
@@ -314,9 +323,9 @@ export const PredictionPage: React.FC = () => {
                           <div className="p-3 rounded-lg bg-[#0b1329] border border-cyan-400 text-xs space-y-1 shadow-xl font-mono">
                             <div className="text-cyan-400 font-bold">Depth: {data.depth} m</div>
                             <div className="text-white">Predicted Temp: <span className="text-emerald-400 font-bold">{data.predictedTemp}°C</span></div>
-                            <div className="text-slate-400">ARGO Benchmark: {data.argoTemp}°C</div>
-                            <div className="text-amber-400">Delta Error: ±{data.error}°C</div>
-                            <div className="text-cyan-300">Confidence: {data.confidence}%</div>
+                            <div className="text-slate-400">ARGO Benchmark: {data.argoTemp == null ? 'Unavailable' : `${data.argoTemp}°C`}</div>
+                            <div className="text-amber-400">Delta Error: {data.error == null ? 'Unavailable' : `±${data.error}°C`}</div>
+                            <div className="text-cyan-300">Confidence: {data.confidence == null ? 'Unavailable' : `${data.confidence}%`}</div>
                             <div className="text-slate-500 text-[10px]">Zone: {data.zone}</div>
                           </div>
                         );
@@ -375,9 +384,9 @@ export const PredictionPage: React.FC = () => {
                   >
                     <td className="p-3 text-cyan-400 font-bold">{row.depth} m</td>
                     <td className="p-3 text-emerald-400 font-bold">{row.predictedTemp} °C</td>
-                    <td className="p-3 text-amber-300">{row.argoTemp} °C</td>
-                    <td className="p-3 text-slate-400">±{row.error} °C</td>
-                    <td className="p-3 text-cyan-300">{row.confidence}%</td>
+                    <td className="p-3 text-amber-300">{row.argoTemp == null ? 'N/A' : `${row.argoTemp} °C`}</td>
+                    <td className="p-3 text-slate-400">{row.error == null ? 'N/A' : `±${row.error} °C`}</td>
+                    <td className="p-3 text-cyan-300">{row.confidence == null ? 'N/A' : `${row.confidence}%`}</td>
                     <td className="p-3">
                       <span
                         className={`px-2 py-0.5 rounded text-[10px] ${

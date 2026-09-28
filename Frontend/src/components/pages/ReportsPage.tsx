@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useOcean } from '../../context/OceanContext';
+import { generateSummary } from '../../models/summaryModel';
 import {
   FileSpreadsheet,
   Download,
@@ -13,7 +14,8 @@ import {
 } from 'lucide-react';
 
 export const ReportsPage: React.FC = () => {
-  const { currentLocation, predictionData, selectedLocation } = useOcean();
+  const { currentLocation, predictionData, selectedLocation, isDemoMode } = useOcean();
+  const summary = generateSummary(predictionData, selectedLocation, isDemoMode ? '°C' : 'unscaled model units');
   const [downloadedItem, setDownloadedItem] = useState<string | null>(null);
 
   const handleDownload = (filename: string, content: string, type: string) => {
@@ -30,9 +32,9 @@ export const ReportsPage: React.FC = () => {
   };
 
   const downloadCSVProfile = () => {
-    let csv = 'Depth_m,Predicted_Temp_C,ARGO_Temp_C,Error_Delta_C,Confidence_Pct,Thermal_Zone\n';
+    let csv = `Depth_m,Predicted_Value,ARGO_Temp_C,Error_Delta_C,Confidence_Pct,Thermal_Zone\n`;
     predictionData.forEach((row) => {
-      csv += `${row.depth},${row.predictedTemp},${row.argoTemp},${row.error},${row.confidence},${row.zone}\n`;
+      csv += `${row.depth},${row.predictedTemp},${row.argoTemp ?? ''},${row.error ?? ''},${row.confidence ?? ''},${row.zone}\n`;
     });
     handleDownload(`OceanEmbed_${selectedLocation}_Temp_Profile.csv`, csv, 'text/csv');
   };
@@ -64,15 +66,14 @@ Ministry of Earth Sciences (MoES) - Government of India
 
 SUMMARY METRICS:
 --------------------------------------------------------------------------------
-RMSE: 1.12 °C
-MAE: 0.84 °C
-R2 Score: 0.93
-Model Confidence: 94.2 %
-Spatial Coverage: 87 %
+RMSE: ${summary.rmse == null ? 'Unavailable' : `${summary.rmse} °C`}
+MAE: ${summary.mae == null ? 'Unavailable' : `${summary.mae} °C`}
+R2 Score: ${summary.r2 ?? 'Unavailable'}
+Model Confidence: ${summary.confidence == null ? 'Not provided by model' : `${summary.confidence} %`}
 
 VERTICAL SUBSURFACE PROFILE (0 - 1000m):
 --------------------------------------------------------------------------------
-${predictionData.map((d) => `Depth: ${d.depth}m | Predicted: ${d.predictedTemp}°C | ARGO Float: ${d.argoTemp}°C | Error: ±${d.error}°C`).join('\n')}
+${predictionData.map((d) => `Depth: ${d.depth}m | Predicted: ${d.predictedTemp}${isDemoMode ? '°C' : ' (unscaled model units)'} | ARGO Float: ${d.argoTemp == null ? 'Unavailable' : `${d.argoTemp}°C`} | Error: ${d.error == null ? 'Unavailable' : `${d.error}°C`}`).join('\n')}
 
 ================================================================================
 `;
@@ -162,7 +163,7 @@ ${predictionData.map((d) => `Depth: ${d.depth}m | Predicted: ${d.predictedTemp}�
             </div>
             <h3 className="text-sm font-bold text-white">Reconstruction Summary Report</h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Comprehensive scientific decision report with performance statistics (RMSE, MAE, R²), thermocline depth, and conclusions.
+              Export model outputs and benchmark statistics when reference observations are available.
             </p>
           </div>
 

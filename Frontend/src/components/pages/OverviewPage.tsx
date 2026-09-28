@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useOcean, LOCATION_DETAILS } from '../../context/OceanContext';
 import { LocationKey, ParameterType } from '../../types/ocean';
+import { interpolatePredictionProfile } from '../../models/predictionModel';
 import { Real2DMap } from '../common/Real2DMap';
 import { TemperatureLegend } from '../common/TemperatureLegend';
 import {
@@ -35,11 +36,15 @@ export const OverviewPage: React.FC = () => {
     selectedLocation,
     setSelectedLocation,
     currentLocation,
+    isDemoMode,
+    modelInputs,
+    setModelInputs,
     selectedParameter,
     setSelectedParameter,
     predictionData,
     isPredicting,
     predictionMessage,
+    predictionError,
     runPrediction,
   } = useOcean();
 
@@ -48,27 +53,18 @@ export const OverviewPage: React.FC = () => {
   const [depthInterval, setDepthInterval] = useState<string>('50');
   const [locationTab, setLocationTab] = useState<'search' | 'coordinates'>('search');
   const [searchQuery, setSearchQuery] = useState<string>('Arabian Sea');
-
-  // Input Parameter state override for prediction inputs
-  const [inputs, setInputs] = useState({
-    sst: currentLocation.surfaceTemp,
-    sss: currentLocation.sss,
-    ssh: currentLocation.ssh,
-    chlorophyll: currentLocation.chlorophyll,
-    windSpeed: currentLocation.windSpeed,
-  });
+  const [rangeStart, rangeEnd] = depthRange.split('-').map(Number);
+  const displayPredictionData = interpolatePredictionProfile(
+    predictionData,
+    rangeStart,
+    rangeEnd,
+    Number(depthInterval)
+  );
+  const availableMaximumDepth = predictionData.length ? Math.max(...predictionData.map((point) => point.depth)) : 0;
 
   // Handle location switch
   const handleSelectLocation = (locKey: LocationKey) => {
     setSelectedLocation(locKey);
-    const loc = LOCATION_DETAILS[locKey];
-    setInputs({
-      sst: loc.surfaceTemp,
-      sss: loc.sss,
-      ssh: loc.ssh,
-      chlorophyll: loc.chlorophyll,
-      windSpeed: loc.windSpeed,
-    });
   };
 
   const quickLocations: { key: LocationKey; name: string }[] = [
@@ -444,31 +440,43 @@ export const OverviewPage: React.FC = () => {
                   </select>
                 </div>
 
+                <p className="text-[10px] text-slate-400">
+                  Values between output channels are linearly interpolated for display, not separately predicted.
+                  {rangeEnd > availableMaximumDepth && availableMaximumDepth > 0
+                    ? ` Model output ends at ${availableMaximumDepth} m; deeper values are unavailable.`
+                    : ''}
+                </p>
+
                 {/* Satellite Input Overrides */}
                 <div className="pt-2 border-t border-cyan-500/10 space-y-2">
-                  <span className="text-[10px] text-slate-400 font-mono uppercase block">Surface Inputs (°C, PSU, m)</span>
+                  <span className="text-[10px] text-slate-400 font-mono uppercase block">Seven Keras Input Channels</span>
                   <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-                    <div>
-                      <span className="text-[10px] text-slate-500">SST:</span>
-                      <input
-                        type="number"
-                        step="0.1"
-                        value={inputs.sst}
-                        onChange={(e) => setInputs({ ...inputs, sst: parseFloat(e.target.value) || 0 })}
-                        className="w-full bg-[#050814] border border-cyan-500/30 rounded px-2 py-1 text-cyan-300"
-                      />
-                    </div>
-                    <div>
-                      <span className="text-[10px] text-slate-500">SSS:</span>
-                      <input
-                        type="number"
-                        step="0.1"
-                        value={inputs.sss}
-                        onChange={(e) => setInputs({ ...inputs, sss: parseFloat(e.target.value) || 0 })}
-                        className="w-full bg-[#050814] border border-cyan-500/30 rounded px-2 py-1 text-cyan-300"
-                      />
-                    </div>
+                    {([
+                      ['analysed_sst', 'SST (°C)'],
+                      ['sos', 'SSS (PSU)'],
+                      ['sla', 'SSH / SLA (m)'],
+                      ['u', 'Current u (m/s)'],
+                      ['v', 'Current v (m/s)'],
+                      ['uwnd', 'Wind u (m/s)'],
+                      ['vwnd', 'Wind v (m/s)'],
+                    ] as const).map(([key, label]) => (
+                      <label key={key} className="text-[10px] text-slate-500">
+                        {label}
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={modelInputs[key]}
+                          onChange={(event) => setModelInputs({ ...modelInputs, [key]: Number(event.target.value) || 0 })}
+                          className="w-full bg-[#050814] border border-cyan-500/30 rounded px-2 py-1 text-cyan-300"
+                        />
+                      </label>
+                    ))}
                   </div>
+                  <p className={`text-[10px] ${isDemoMode ? 'text-amber-300' : 'text-cyan-300'}`}>
+                    {isDemoMode
+                      ? 'Demo mode uses a fixed illustrative profile; these inputs are not sent to Keras.'
+                      : 'Live mode runs Keras. Results are raw and unnormalized; the notebook does not include its training scaler or output-depth mapping.'}
+                  </p>
                 </div>
 
                 {/* Run Prediction Button */}
@@ -498,6 +506,9 @@ export const OverviewPage: React.FC = () => {
                   <p className="text-[10px] text-cyan-400 font-mono animate-pulse text-center">
                     {predictionMessage || 'Processing satellite observation tensor...'}
                   </p>
+                )}
+                {predictionError && (
+                  <p role="alert" className="text-[10px] text-red-300 text-center">{predictionError}</p>
                 )}
               </div>
             </div>
@@ -543,7 +554,7 @@ export const OverviewPage: React.FC = () => {
                 <div className="h-[380px] w-full pt-2">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart
-                      data={predictionData}
+                      data={displayPredictionData}
                       margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
@@ -552,11 +563,11 @@ export const OverviewPage: React.FC = () => {
                         type="number"
                         dataKey="predictedTemp"
                         name="Temperature"
-                        unit="°C"
-                        domain={[0, 30]}
+                        unit={isDemoMode ? '°C' : ''}
+                        domain={isDemoMode ? [0, 30] : ['auto', 'auto']}
                         stroke="#94a3b8"
                         tick={{ fill: '#94a3b8', fontSize: 11 }}
-                        label={{ value: 'Temperature (°C)', position: 'insideBottom', offset: -10, fill: '#00f0ff', fontSize: 11 }}
+                        label={{ value: isDemoMode ? 'Temperature (°C)' : 'Raw model output (unscaled)', position: 'insideBottom', offset: -10, fill: '#00f0ff', fontSize: 11 }}
                       />
 
                       <YAxis
@@ -579,9 +590,9 @@ export const OverviewPage: React.FC = () => {
                             return (
                               <div className="p-3 rounded-lg bg-[#0b1329] border border-cyan-400 text-xs space-y-1 shadow-xl font-mono">
                                 <div className="text-cyan-400 font-bold">Depth: {data.depth} m</div>
-                                <div className="text-white">Predicted Temp: <span className="text-cyan-300 font-bold">{data.predictedTemp}°C</span></div>
-                                <div className="text-amber-400">ARGO Float: {data.argoTemp}°C</div>
-                                <div className="text-slate-400">Confidence: {data.confidence}%</div>
+                                <div className="text-white">{isDemoMode ? 'Predicted Temp' : 'Raw model output'}: <span className="text-cyan-300 font-bold">{data.predictedTemp}{isDemoMode ? '°C' : ''}</span></div>
+                                <div className="text-amber-400">ARGO Float: {data.argoTemp == null ? 'Unavailable' : `${data.argoTemp}°C`}</div>
+                                <div className="text-slate-400">Confidence: {data.confidence == null ? 'Not provided by model' : `${data.confidence}%`}</div>
                               </div>
                             );
                           }
@@ -616,18 +627,18 @@ export const OverviewPage: React.FC = () => {
                     <thead className="bg-[#050814] text-cyan-300 border-b border-cyan-500/30">
                       <tr>
                         <th className="p-2.5">Depth (m)</th>
-                        <th className="p-2.5">Predicted Temp (°C)</th>
+                        <th className="p-2.5">{isDemoMode ? 'Predicted Temp (°C)' : 'Raw model output (unscaled)'}</th>
                         <th className="p-2.5">ARGO Float (°C)</th>
                         <th className="p-2.5">Confidence</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800">
-                      {predictionData.map((row) => (
+                      {displayPredictionData.map((row) => (
                         <tr key={row.depth} className="hover:bg-cyan-950/20 text-slate-300">
                           <td className="p-2.5 text-cyan-400 font-bold">{row.depth} m</td>
-                          <td className="p-2.5 text-emerald-400 font-bold">{row.predictedTemp} °C</td>
-                          <td className="p-2.5 text-amber-300">{row.argoTemp} °C</td>
-                          <td className="p-2.5 text-cyan-300">{row.confidence}%</td>
+                          <td className="p-2.5 text-emerald-400 font-bold">{row.predictedTemp}{isDemoMode ? ' °C' : ''}</td>
+                          <td className="p-2.5 text-amber-300">{row.argoTemp == null ? 'N/A' : `${row.argoTemp} °C`}</td>
+                          <td className="p-2.5 text-cyan-300">{row.confidence == null ? 'Not provided' : `${row.confidence}%`}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -664,11 +675,11 @@ export const OverviewPage: React.FC = () => {
                   <thead className="text-slate-400 border-b border-slate-800">
                     <tr>
                       <th className="py-1.5 px-2">Depth (m)</th>
-                      <th className="py-1.5 px-2 text-right">Temperature (°C)</th>
+                        <th className="py-1.5 px-2 text-right">{isDemoMode ? 'Temperature (°C)' : 'Raw model output'}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60">
-                    {predictionData.map((row) => (
+                    {displayPredictionData.map((row) => (
                       <tr key={row.depth} className="hover:bg-cyan-950/20 text-slate-200">
                         <td className="py-1.5 px-2 text-cyan-400">{row.depth}</td>
                         <td className="py-1.5 px-2 text-right font-bold text-white">{row.predictedTemp}</td>
@@ -686,19 +697,23 @@ export const OverviewPage: React.FC = () => {
               </div>
 
               <div className="text-2xl font-extrabold text-cyan-300 font-mono">
-                92.4 %
+                {predictionData.length > 0 && predictionData.every((point) => point.confidence != null)
+                  ? `${(predictionData.reduce((total, point) => total + (point.confidence ?? 0), 0) / predictionData.length).toFixed(1)} %`
+                  : 'Not provided'}
               </div>
 
               {/* Progress bar */}
               <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-cyan-400 to-emerald-400 shadow-[0_0_10px_rgba(0,240,255,0.6)]"
-                  style={{ width: '92.4%' }}
+                  style={{ width: predictionData.length > 0 && predictionData.every((point) => point.confidence != null)
+                    ? `${predictionData.reduce((total, point) => total + (point.confidence ?? 0), 0) / predictionData.length}%`
+                    : '0%' }}
                 />
               </div>
 
               <p className="text-[10px] text-slate-400">
-                High confidence validation score based on ARGO profiling float benchmark agreement.
+                This Keras model returns seven value channels and no confidence score.
               </p>
             </div>
 

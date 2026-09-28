@@ -1,19 +1,6 @@
 import { SatelliteParameters, DepthPoint, LocationKey } from '../types/ocean';
 
-/**
- * ============================================================================
- * [ CONNECT PREDICTION MODEL HERE ]
- * ============================================================================
- * 
- * Integration layer for Subsurface Temperature Prediction ML Model.
- * 
- * TO CONNECT YOUR TRAINED DEEP LEARNING MODEL:
- * 1. Replace the demo implementation inside `predictSubsurfaceTemperature()`
- * 2. Send `inputData` as JSON POST payload to your Python FastAPI / Flask backend:
- *    `const res = await fetch('http://localhost:8000/api/predict', { method: 'POST', body: JSON.stringify(inputData) });`
- * 3. Ensure your backend model returns depth array and temperature array:
- *    { "depths": [0, 50, 100, 200, 300, 500, 750, 1000], "temperatures": [28.6, 26.2, 22.9, 18.4, 14.7, 11.2, 7.8, 5.1] }
- */
+/** Frontend adapter for the local FastAPI/Keras service and illustrative demo profile. */
 
 export const DEFAULT_LOCATIONS: Record<LocationKey, { sst: number; sss: number; ssh: number; chlorophyll: number; windSpeed: number; lat: number; lon: number }> = {
   bay_of_bengal: {
@@ -71,32 +58,98 @@ export function getInitialPredictionData(locationKey: LocationKey): DepthPoint[]
   });
 }
 
+export function interpolatePredictionProfile(
+  predictionData: DepthPoint[],
+  startDepth: number,
+  endDepth: number,
+  interval: number
+): DepthPoint[] {
+  const sorted = [...predictionData].sort((a, b) => a.depth - b.depth);
+  if (!sorted.length || interval <= 0) return [];
+
+  const minimumDepth = Math.max(startDepth, sorted[0].depth);
+  const maximumDepth = Math.min(endDepth, sorted[sorted.length - 1].depth);
+  if (minimumDepth > maximumDepth) return [];
+
+  const depths: number[] = [];
+  for (let depth = minimumDepth; depth <= maximumDepth; depth += interval) {
+    depths.push(depth);
+  }
+
+  return depths.map((depth): DepthPoint => {
+    const exact = sorted.find((point) => point.depth === depth);
+    if (exact) return exact;
+
+    const rightIndex = sorted.findIndex((point) => point.depth > depth);
+    const left = sorted[rightIndex - 1];
+    const right = sorted[rightIndex];
+    const fraction = (depth - left.depth) / (right.depth - left.depth);
+    const interpolate = (leftValue: number | null, rightValue: number | null): number | null => {
+      if (leftValue == null || rightValue == null) return null;
+      return Number((leftValue + (rightValue - leftValue) * fraction).toFixed(2));
+    };
+
+    return {
+      depth,
+      predictedTemp: interpolate(left.predictedTemp, right.predictedTemp) ?? left.predictedTemp,
+      argoTemp: interpolate(left.argoTemp, right.argoTemp),
+      error: interpolate(left.error, right.error),
+      confidence: interpolate(left.confidence, right.confidence),
+      zone: depth < 100 ? 'Surface Layer' : depth <= 300 ? 'Thermocline' : 'Deep Ocean',
+    };
+  });
+}
+
 /**
  * Predict Subsurface Temperature function wrapper
  * Performs simulated deep learning inference sequence with asynchronous progress callbacks.
  */
 export async function predictSubsurfaceTemperature(
   inputData: SatelliteParameters,
-  onProgress?: (step: number, message: string) => void
+  onProgress?: (step: number, message: string) => void,
+  isDemoMode: boolean = true
 ): Promise<DepthPoint[]> {
+  if (isDemoMode) {
+    onProgress?.(1, 'Preparing demo profile...');
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    onProgress?.(2, 'Generating illustrative profile...');
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    return getInitialPredictionData(inputData.locationKey);
+  }
 
-  // Step 1: Preprocessing
-  onProgress?.(1, 'Preprocessing Satellite Observations (SST, SSS, SSH, Chlorophyll)...');
-  await new Promise((r) => setTimeout(r, 600));
+  onProgress?.(1, 'Preparing the seven model input channels...');
+  onProgress?.(2, 'Sending a 68 × 80 constant-grid prototype to the Keras API...');
 
-  // Step 2: Ocean Embedding
-  onProgress?.(2, 'Extracting Spatiotemporal Ocean Embeddings & Latent Features...');
-  await new Promise((r) => setTimeout(r, 700));
+  const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000').replace(/\/$/, '');
+  const response = await fetch(`${apiBaseUrl}/api/v1/predict`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      locationKey: inputData.locationKey,
+      latitude: inputData.latitude,
+      longitude: inputData.longitude,
+      date: inputData.date,
+      inputs: inputData.modelInputs,
+    }),
+  });
 
-  // Step 3: AI Inference
-  onProgress?.(3, 'Executing Channel-to-Depth ResU-Net AI Inference Engine...');
-  await new Promise((r) => setTimeout(r, 800));
+  const result = await response.json();
+  if (!response.ok) {
+    throw new Error(result.detail || `Model API request failed (${response.status})`);
+  }
+  if (!Array.isArray(result.predictions) || result.predictions.length !== 7) {
+    throw new Error('Model API returned an unexpected prediction profile.');
+  }
 
-  // Step 4: Postprocessing
-  onProgress?.(4, 'Reconstructing Vertical Subsurface Thermocline Profile...');
-  await new Promise((r) => setTimeout(r, 400));
+  onProgress?.(3, 'Running the trained Keras convolutional model...');
+  onProgress?.(4, 'Reducing output maps to the configured depth profile...');
 
-  // TODO: CONNECT REAL MODEL HERE
-  // Replace return below with API response data from your PyTorch/TensorFlow backend
-  return getInitialPredictionData(inputData.locationKey);
+  return result.predictions.map((point: { depth: number; temperature: number }) => ({
+    depth: point.depth,
+    predictedTemp: Number(point.temperature.toFixed(2)),
+    argoTemp: null,
+    error: null,
+    confidence: null,
+    zone: point.depth < 100 ? 'Surface Layer' : point.depth <= 300 ? 'Thermocline' : 'Deep Ocean',
+  }));
 }

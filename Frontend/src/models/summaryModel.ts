@@ -14,33 +14,58 @@ import { DepthPoint, DynamicSummary, LocationKey } from '../types/ocean';
 
 export function generateSummary(
   predictionResults: DepthPoint[],
-  locationKey: LocationKey
+  locationKey: LocationKey,
+  outputUnit: string = '°C'
 ): DynamicSummary {
-  const sst = predictionResults.find((d) => d.depth === 0)?.predictedTemp || 28.6;
-  const temp100 = predictionResults.find((d) => d.depth === 100)?.predictedTemp || 22.9;
-  const temp300 = predictionResults.find((d) => d.depth === 300)?.predictedTemp || 14.7;
+  const sorted = [...predictionResults].sort((a, b) => a.depth - b.depth);
+  const comparisons = sorted.filter((point) => point.argoTemp != null && point.error != null);
+  const rmse = comparisons.length
+    ? Number(Math.sqrt(comparisons.reduce((sum, point) => sum + (point.error ?? 0) ** 2, 0) / comparisons.length).toFixed(2))
+    : null;
+  const mae = comparisons.length
+    ? Number((comparisons.reduce((sum, point) => sum + Math.abs(point.error ?? 0), 0) / comparisons.length).toFixed(2))
+    : null;
+  const observedMean = comparisons.length
+    ? comparisons.reduce((sum, point) => sum + (point.argoTemp ?? 0), 0) / comparisons.length
+    : 0;
+  const totalVariation = comparisons.reduce((sum, point) => sum + ((point.argoTemp ?? 0) - observedMean) ** 2, 0);
+  const residualVariation = comparisons.reduce((sum, point) => sum + (point.error ?? 0) ** 2, 0);
+  const r2 = comparisons.length && totalVariation > 0
+    ? Number((1 - residualVariation / totalVariation).toFixed(3))
+    : null;
+  const providedConfidence = sorted.filter((point) => point.confidence != null);
+  const confidence = providedConfidence.length
+    ? Number((providedConfidence.reduce((sum, point) => sum + (point.confidence ?? 0), 0) / providedConfidence.length).toFixed(1))
+    : null;
 
-  // Calculate dynamic metrics based on predictions
-  const avgError = predictionResults.reduce((acc, curr) => acc + curr.error, 0) / predictionResults.length;
-  const rmse = Number((avgError * 1.32).toFixed(2));
-  const mae = Number(avgError.toFixed(2));
-  const r2 = Number((0.95 - avgError * 0.04).toFixed(2));
-  const confidence = Number((96.5 - avgError * 4.2).toFixed(1));
+  let thermoclineDepth = 0;
+  let steepestGradient = 0;
+  for (let index = 1; index < sorted.length; index += 1) {
+    const depthDelta = sorted[index].depth - sorted[index - 1].depth;
+    const gradient = depthDelta > 0
+      ? Math.abs((sorted[index].predictedTemp - sorted[index - 1].predictedTemp) / depthDelta)
+      : 0;
+    if (gradient > steepestGradient) {
+      steepestGradient = gradient;
+      thermoclineDepth = sorted[index - 1].depth;
+    }
+  }
 
+  const surfaceTemp = sorted.find((point) => point.depth === 0)?.predictedTemp;
   const locationName = locationKey === 'bay_of_bengal' ? 'Bay of Bengal' : 'Arabian Sea';
-  const maxErrDepth = predictionResults.reduce((prev, current) => (prev.error > current.error ? prev : current)).depth;
+  const keyInsights: string[] = sorted.length
+    ? [
+        `${locationName} model output spans ${Math.min(...sorted.map((point) => point.predictedTemp)).toFixed(2)}–${Math.max(...sorted.map((point) => point.predictedTemp)).toFixed(2)} ${outputUnit} across the configured output channels.`,
+        surfaceTemp == null ? 'A surface-depth output channel was not configured.' : `Surface channel output is ${surfaceTemp.toFixed(2)} ${outputUnit}.`,
+        `The largest adjacent-channel change begins near ${thermoclineDepth} m.`,
+        comparisons.length
+          ? `Compared with ${comparisons.length} supplied benchmark points: RMSE ${rmse} °C, MAE ${mae} °C, R² ${r2 ?? 'N/A'}.`
+          : 'Validation metrics are unavailable because no matching ARGO or target observations were supplied.',
+      ]
+    : ['Run a prediction to populate model output and summary statistics.'];
 
-  const keyInsights: string[] = [
-    `Sea surface satellite observation (${sst}°C) indicates elevated thermal energy in the ${locationName} upper ocean layer.`,
-    `Thermocline barrier layer detected starting at ~100m depth with a rapid thermal gradient dropping from ${temp100}°C to ${temp300}°C at 300m.`,
-    `Overall model prediction confidence across 0–1000m water column is estimated at ${confidence}% (R² = ${r2}).`,
-    `Maximum residual prediction error against ARGO float in-situ observations occurs around ${maxErrDepth}m depth within the seasonal thermocline.`,
-    `Deep ocean temperature stabilizes below 750m depth with high reconstruction agreement (RMSE < 0.2°C).`
-  ];
-
-  // TODO: CONNECT REAL MODEL HERE
   return {
-    thermoclineDepth: 100,
+    thermoclineDepth,
     rmse,
     mae,
     r2,
