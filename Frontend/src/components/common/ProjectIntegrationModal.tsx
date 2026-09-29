@@ -100,89 +100,90 @@ model.eval()
 `;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="bg-[#0b1329] border border-cyan-500/40 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-[0_0_50px_rgba(0,240,255,0.25)] overflow-hidden">
+    <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
+      <div className="bg-[#0b1329] border border-cyan-500/40 rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-[0_0_50px_rgba(0,240,255,0.25)] overflow-hidden">
         
         {/* Header */}
-        <div className="p-5 border-b border-cyan-500/20 flex items-center justify-between bg-[#070d1e]/80">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-400/30 text-cyan-400">
-              <Code2 className="w-6 h-6" />
+        <div className="p-3 sm:p-5 border-b border-cyan-500/20 flex items-center justify-between bg-[#070d1e]/80">
+          <div className="flex items-center space-x-2.5 sm:space-x-3">
+            <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-400/30 text-cyan-400 shrink-0">
+              <Code2 className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white tracking-wide flex items-center gap-2">
-                Project Integration Guide
-                <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 font-mono">
-                  Where to add your code & ML models
+              <h2 className="text-sm sm:text-lg font-bold text-white tracking-wide flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <span>Project Integration Guide</span>
+                <span className="text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 font-mono">
+                  ML & Backend Setup
                 </span>
               </h2>
-              <p className="text-xs text-slate-400">
-                Step-by-step instructions to connect your Python models, FastAPI server, or PyTorch weights
+              <p className="text-[10px] sm:text-xs text-slate-400">
+                Instructions to connect your Python models, FastAPI server, or weights
               </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+            className="p-1.5 sm:p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors shrink-0"
+            aria-label="Close dialog"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex border-b border-cyan-500/20 bg-[#050814] px-5 pt-3 space-x-2">
+        <div className="flex border-b border-cyan-500/20 bg-[#050814] px-3 sm:px-5 pt-2 sm:pt-3 space-x-2 overflow-x-auto">
           <button
             onClick={() => setActiveTab('files')}
-            className={`px-4 py-2 text-xs font-semibold rounded-t-lg transition-all flex items-center space-x-2 ${
+            className={`whitespace-nowrap px-3 sm:px-4 py-2 text-xs font-semibold rounded-t-lg transition-all flex items-center space-x-2 shrink-0 ${
               activeTab === 'files'
                 ? 'bg-[#0b1329] text-cyan-300 border-t-2 border-cyan-400 shadow-[0_-4px_10px_rgba(0,240,255,0.1)]'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             <FileCode className="w-3.5 h-3.5" />
-            <span>1. Frontend Files to Edit</span>
+            <span>1. Frontend Files</span>
           </button>
 
           <button
             onClick={() => setActiveTab('fastapi')}
-            className={`px-4 py-2 text-xs font-semibold rounded-t-lg transition-all flex items-center space-x-2 ${
+            className={`whitespace-nowrap px-3 sm:px-4 py-2 text-xs font-semibold rounded-t-lg transition-all flex items-center space-x-2 shrink-0 ${
               activeTab === 'fastapi'
                 ? 'bg-[#0b1329] text-cyan-300 border-t-2 border-cyan-400 shadow-[0_-4px_10px_rgba(0,240,255,0.1)]'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             <Server className="w-3.5 h-3.5" />
-            <span>2. Python FastAPI Backend</span>
+            <span>2. FastAPI Backend</span>
           </button>
 
           <button
             onClick={() => setActiveTab('pytorch')}
-            className={`px-4 py-2 text-xs font-semibold rounded-t-lg transition-all flex items-center space-x-2 ${
+            className={`whitespace-nowrap px-3 sm:px-4 py-2 text-xs font-semibold rounded-t-lg transition-all flex items-center space-x-2 shrink-0 ${
               activeTab === 'pytorch'
                 ? 'bg-[#0b1329] text-cyan-300 border-t-2 border-cyan-400 shadow-[0_-4px_10px_rgba(0,240,255,0.1)]'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
             <Terminal className="w-3.5 h-3.5" />
-            <span>3. PyTorch Model Weights</span>
+            <span>3. Model Weights</span>
           </button>
 
           <button
             onClick={() => setActiveTab('schema')}
-            className={`px-4 py-2 text-xs font-semibold rounded-t-lg transition-all flex items-center space-x-2 ${
+            className={`whitespace-nowrap px-3 sm:px-4 py-2 text-xs font-semibold rounded-t-lg transition-all flex items-center space-x-2 shrink-0 ${
               activeTab === 'schema'
                 ? 'bg-[#0b1329] text-cyan-300 border-t-2 border-cyan-400 shadow-[0_-4px_10px_rgba(0,240,255,0.1)]'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <Code2 className="w-3.5 h-3.5" />
-            <span>4. JSON Data Schema</span>
+            <CheckCircle className="w-3.5 h-3.5" />
+            <span>4. JSON Schema</span>
           </button>
         </div>
 
         {/* Tab Content */}
-        <div className="p-6 overflow-y-auto flex-1 space-y-4">
+        <div className="p-3.5 sm:p-6 overflow-y-auto flex-1 space-y-4">
           
           {/* TAB 1: FRONTEND FILES */}
           {activeTab === 'files' && (

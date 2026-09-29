@@ -81,9 +81,9 @@ export const OverviewPage: React.FC = () => {
       {/* SECTION 1: GLOBAL OCEAN OVERVIEW (DASHBOARD) */}
       <div className="space-y-5">
         {/* Section Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-cyan-500/20 pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-cyan-500/20 pb-4">
           <div>
-            <h1 className="text-2xl font-extrabold text-white tracking-wide flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-wide flex items-center gap-2">
               Global Ocean Overview
             </h1>
             <p className="text-xs text-slate-400 mt-0.5">
@@ -91,7 +91,7 @@ export const OverviewPage: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex items-center space-x-3 text-xs">
+          <div className="flex items-center space-x-3 text-xs self-start sm:self-auto">
             <span className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-[#0b1329] border border-cyan-500/30 text-cyan-300 font-mono">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
               <span>Data: Latest (12 Sep 2026)</span>
@@ -100,7 +100,7 @@ export const OverviewPage: React.FC = () => {
         </div>
 
         {/* 3-Column Dashboard Layout matching Screenshot Frame 1 */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
           
           {/* LEFT PANEL: Set Location (3 Columns) */}
           <div className="lg:col-span-3 space-y-4">
@@ -216,13 +216,13 @@ export const OverviewPage: React.FC = () => {
           <div className="lg:col-span-6 space-y-4">
             <div className="ocean-card p-4 space-y-3 flex flex-col justify-between h-full">
               <div>
-                <div className="flex items-center justify-between border-b border-cyan-500/20 pb-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-cyan-500/20 pb-3 gap-2">
                   <span className="text-xs font-bold text-cyan-300 uppercase tracking-wider">
                     Sea Surface Temperature (SST)
                   </span>
                   
                   {/* View Selector */}
-                  <div className="flex items-center space-x-2 text-xs">
+                  <div className="flex items-center space-x-2 text-xs self-start sm:self-auto">
                     <span className="text-slate-400">View:</span>
                     <select
                       value={selectedParameter}
@@ -240,7 +240,7 @@ export const OverviewPage: React.FC = () => {
 
                 {/* Real Interactive Leaflet 2D Map */}
                 <div className="mt-3">
-                  <Real2DMap selectedParam={selectedParameter} heightClass="h-[360px]" />
+                  <Real2DMap selectedParam={selectedParameter} heightClass="h-[200px] sm:h-[280px] md:h-[360px]" />
                 </div>
               </div>
 
@@ -359,9 +359,9 @@ export const OverviewPage: React.FC = () => {
       <div className="space-y-5 pt-4">
         
         {/* Section Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-cyan-500/20 pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-cyan-500/20 pb-4">
           <div>
-            <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2">
+            <h2 className="text-lg sm:text-xl font-bold text-white tracking-wide flex items-center gap-2">
               Subsurface Temperature Prediction
               <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-mono">
                 AI Deep Learning
@@ -374,7 +374,7 @@ export const OverviewPage: React.FC = () => {
         </div>
 
         {/* 3-Column Layout matching Screenshot Frame 2 */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
           
           {/* LEFT PANEL: Selected Location & Model Settings (3 Columns) */}
           <div className="lg:col-span-3 space-y-4">
@@ -554,7 +554,7 @@ export const OverviewPage: React.FC = () => {
 
               {/* Chart area */}
               {activeTab === 'profile' ? (
-                <div className="h-[380px] w-full pt-2">
+                <div className="h-[250px] sm:h-[320px] md:h-[380px] w-full pt-2">
                   {displayPredictionData.length === 0 ? (
                     <div role="status" className="h-full flex items-center justify-center text-sm text-slate-400">
                       {isPredicting ? predictionMessage || 'Running model...' : predictionError || 'No prediction data available.'}
@@ -563,7 +563,7 @@ export const OverviewPage: React.FC = () => {
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart
                       data={displayPredictionData}
-                      margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                      margin={{ top: 15, right: 20, left: 0, bottom: 20 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                       
@@ -631,7 +631,7 @@ export const OverviewPage: React.FC = () => {
                   )}
                 </div>
               ) : (
-                <div className="overflow-x-auto h-[380px]">
+                <div className="overflow-x-auto h-[320px] sm:h-[380px]">
                   <table className="w-full text-left text-xs font-mono">
                     <thead className="bg-[#050814] text-cyan-300 border-b border-cyan-500/30">
                       <tr>
@@ -659,7 +659,7 @@ export const OverviewPage: React.FC = () => {
               )}
 
               {/* Chart Legend Footer */}
-              <div className="flex items-center justify-center space-x-6 text-xs pt-2 border-t border-cyan-500/10 font-mono">
+              <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-xs pt-2 border-t border-cyan-500/10 font-mono">
                 <div className="flex items-center space-x-2">
                   <span className="w-3 h-3 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(0,240,255,0.8)]" />
                   <span className="text-cyan-300">Predicted (OceanEmbed)</span>

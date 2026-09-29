@@ -29,9 +29,9 @@ export const Ocean3DPage: React.FC = () => {
   return (
     <div className="space-y-6 pb-12">
       {/* Title Header matching Screenshot Frame 3 */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-cyan-500/20 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-cyan-500/20 pb-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-white tracking-wide flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-wide flex items-center gap-2">
             3D Subsurface Ocean Temperature
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
@@ -39,7 +39,7 @@ export const Ocean3DPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center space-x-3 text-xs">
+        <div className="flex items-center space-x-3 text-xs self-start sm:self-auto">
           <span className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-[#0b1329] border border-cyan-500/30 text-cyan-300 font-mono">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
             <span>Data: Latest (12 Sep 2026)</span>
@@ -48,7 +48,7 @@ export const Ocean3DPage: React.FC = () => {
       </div>
 
       {/* Main 3D Grid Workspace */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
         
         {/* LEFT PANEL: View Settings (3 Columns) */}
         <div className="lg:col-span-3 space-y-4">
@@ -172,7 +172,7 @@ export const Ocean3DPage: React.FC = () => {
           <div className="ocean-card p-4 space-y-3 relative flex flex-col justify-between min-h-[540px]">
             
             {/* Top View Mode Toggles */}
-            <div className="flex items-center justify-end space-x-2 z-10">
+            <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2 z-10">
               <button
                 onClick={() => setViewMode('volume')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
@@ -206,7 +206,7 @@ export const Ocean3DPage: React.FC = () => {
             </div>
 
             {/* Main 3D Canvas + Color Scale Bar Layout */}
-            <div className="relative flex-1 rounded-xl overflow-hidden border border-cyan-500/30 bg-[#050814] min-h-[420px] flex">
+            <div className="relative flex-1 rounded-xl overflow-hidden border border-cyan-500/30 bg-[#050814] min-h-[340px] sm:min-h-[420px] flex">
               
               {/* WebGL 3D Canvas */}
               <div className="flex-1">
@@ -220,13 +220,13 @@ export const Ocean3DPage: React.FC = () => {
               </div>
 
               {/* Vertical Color Scale Legend on Right side of frame */}
-              <div className="w-16 p-3 bg-[#070d1e]/80 border-l border-cyan-500/20 backdrop-blur-md flex flex-col items-center justify-between text-[10px] font-mono text-slate-300 z-10">
-                <span className="text-cyan-300 font-bold text-center leading-tight">Temperature (°C)</span>
+              <div className="w-12 sm:w-16 p-2 sm:p-3 bg-[#070d1e]/80 border-l border-cyan-500/20 backdrop-blur-md flex flex-col items-center justify-between text-[9px] sm:text-[10px] font-mono text-slate-300 z-10 shrink-0">
+                <span className="text-cyan-300 font-bold text-center leading-tight">Temp (°C)</span>
                 
-                <div className="flex-1 w-3 my-2 rounded-full bg-gradient-to-b from-red-500 via-amber-400 via-emerald-400 via-cyan-400 to-blue-700 border border-slate-700" />
+                <div className="flex-1 w-2.5 sm:w-3 my-2 rounded-full bg-gradient-to-b from-red-500 via-amber-400 via-emerald-400 via-cyan-400 to-blue-700 border border-slate-700" />
                 
-                <div className="flex flex-col justify-between h-full space-y-2 text-right">
-                  <span className="text-red-400 font-bold">&gt; 30</span>
+                <div className="flex flex-col justify-between h-full space-y-1 sm:space-y-2 text-right">
+                  <span className="text-red-400 font-bold">&gt;30</span>
                   <span>25</span>
                   <span>20</span>
                   <span>15</span>

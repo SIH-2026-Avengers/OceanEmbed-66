@@ -119,6 +119,17 @@ export const Real2DMap: React.FC<Real2DMapProps> = ({ selectedParam = 'sst', hei
       duration: 1.0,
     });
 
+    const handleResize = () => {
+      map.invalidateSize();
+    };
+    window.addEventListener('resize', handleResize);
+    const timer = setTimeout(handleResize, 300);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      clearTimeout(timer);
+    };
+
   }, [selectedLocation, currentLocation, selectedParam, setSelectedLocation]);
 
   return (
@@ -126,13 +137,13 @@ export const Real2DMap: React.FC<Real2DMapProps> = ({ selectedParam = 'sst', hei
       <div ref={mapContainerRef} className="w-full h-full z-0 bg-[#050814]" />
       
       {/* Top Map Badges */}
-      <div className="absolute top-3 left-3 z-10 px-3 py-1 rounded-lg bg-[#070d1e]/90 border border-cyan-500/30 text-[10px] font-mono text-cyan-300 backdrop-blur-md flex items-center space-x-2">
-        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-        <span>OPENSTREETMAP BASEMAP</span>
+      <div className="absolute top-2.5 sm:top-3 left-2.5 sm:left-3 z-10 px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg bg-[#070d1e]/90 border border-cyan-500/30 text-[9px] sm:text-[10px] font-mono text-cyan-300 backdrop-blur-md flex items-center space-x-1.5 sm:space-x-2">
+        <span className="w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full bg-emerald-400 animate-ping" />
+        <span>OSM BASEMAP</span>
       </div>
 
-      <div className="absolute top-3 right-3 z-10 px-3 py-1 rounded-lg bg-[#070d1e]/90 border border-cyan-500/30 text-[10px] font-mono text-cyan-300 backdrop-blur-md">
-        VARIABLE: <span className="text-white font-bold">{selectedParam.toUpperCase()}</span>
+      <div className="absolute top-2.5 sm:top-3 right-2.5 sm:right-3 z-10 px-2 sm:px-3 py-0.5 sm:py-1 rounded-lg bg-[#070d1e]/90 border border-cyan-500/30 text-[9px] sm:text-[10px] font-mono text-cyan-300 backdrop-blur-md">
+        <span>{selectedParam.toUpperCase()}</span>
       </div>
     </div>
   );

@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { LocationKey, LocationInfo, ModelInputValues, ParameterType, DepthPoint } from '../types/ocean';
 import { getInitialPredictionData, predictSubsurfaceTemperature } from '../models/predictionModel';
 
-export type PageType = 'overview' | 'ocean3d' | 'summary';
+export type PageType = 'overview' | 'ocean3d';
 
 export const LOCATION_DETAILS: Record<LocationKey, LocationInfo> = {
   arabian_sea: {
@@ -72,6 +72,9 @@ interface OceanContextType {
   selectedDepth: number;
   setSelectedDepth: (depth: number) => void;
   lastUpdated: string;
+  isMobileSidebarOpen: boolean;
+  setIsMobileSidebarOpen: (open: boolean) => void;
+  toggleMobileSidebar: () => void;
 }
 
 const OceanContext = createContext<OceanContextType | undefined>(undefined);
@@ -82,6 +85,8 @@ export const OceanProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [activePage, setActivePage] = useState<PageType>('overview');
   const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
   const [selectedDepth, setSelectedDepth] = useState<number>(200);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
+  const toggleMobileSidebar = () => setIsMobileSidebarOpen((prev) => !prev);
   const [modelInputs, setModelInputs] = useState<ModelInputValues>(() => getDefaultModelInputs(LOCATION_DETAILS.arabian_sea));
 
   const [predictionData, setPredictionData] = useState<DepthPoint[]>(() =>
@@ -203,6 +208,9 @@ export const OceanProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         selectedDepth,
         setSelectedDepth,
         lastUpdated,
+        isMobileSidebarOpen,
+        setIsMobileSidebarOpen,
+        toggleMobileSidebar,
       }}
     >
       {children}
