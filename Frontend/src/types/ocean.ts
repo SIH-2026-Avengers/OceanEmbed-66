@@ -35,18 +35,30 @@ export interface SatelliteParameters {
   ssh: number;
   chlorophyll: number;
   windSpeed: number;
+  surfaceCurrent: number;
+  modelInputs: ModelInputValues;
   latitude: number;
   longitude: number;
   date: string;
   locationKey: LocationKey;
 }
 
+export interface ModelInputValues {
+  analysed_sst: number;
+  sos: number;
+  sla: number;
+  u: number;
+  v: number;
+  uwnd: number;
+  vwnd: number;
+}
+
 export interface DepthPoint {
   depth: number;           // Depth in meters (0, 50, 100, 200, 300, 500, 750, 1000)
   predictedTemp: number;   // °C
-  argoTemp: number;        // °C (Observed benchmark)
-  error: number;           // ΔT (°C)
-  confidence: number;      // %
+  argoTemp: number | null; // °C (Observed benchmark, when available)
+  error: number | null;    // ΔT (°C), when benchmark data is available
+  confidence: number | null;
   zone: 'Surface Layer' | 'Thermocline' | 'Deep Ocean';
 }
 
@@ -60,10 +72,10 @@ export interface ModelMetrics {
 
 export interface DynamicSummary {
   thermoclineDepth: number; // Depth range start/end in meters
-  rmse: number;
-  mae: number;
-  r2: number;
-  confidence: number;
+  rmse: number | null;
+  mae: number | null;
+  r2: number | null;
+  confidence: number | null;
   keyInsights: string[];
 }
 

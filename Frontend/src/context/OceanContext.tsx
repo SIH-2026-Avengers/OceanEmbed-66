@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { LocationKey, LocationInfo, ParameterType, DepthPoint } from '../types/ocean';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { LocationKey, LocationInfo, ModelInputValues, ParameterType, DepthPoint } from '../types/ocean';
 import { getInitialPredictionData, predictSubsurfaceTemperature } from '../models/predictionModel';
 
 export type PageType = 'overview' | 'ocean3d' | 'summary';
@@ -41,10 +41,22 @@ export const LOCATION_DETAILS: Record<LocationKey, LocationInfo> = {
   },
 };
 
+const getDefaultModelInputs = (location: LocationInfo): ModelInputValues => ({
+  analysed_sst: location.surfaceTemp,
+  sos: location.sss,
+  sla: location.ssh,
+  u: location.surfaceCurrent,
+  v: 0,
+  uwnd: location.windSpeed,
+  vwnd: 0,
+});
+
 interface OceanContextType {
   selectedLocation: LocationKey;
   setSelectedLocation: (loc: LocationKey) => void;
   currentLocation: LocationInfo;
+  modelInputs: ModelInputValues;
+  setModelInputs: (inputs: ModelInputValues) => void;
   selectedParameter: ParameterType;
   setSelectedParameter: (param: ParameterType) => void;
   activePage: PageType;
@@ -55,6 +67,7 @@ interface OceanContextType {
   isPredicting: boolean;
   predictionStep: number;
   predictionMessage: string;
+  predictionError: string | null;
   runPrediction: () => Promise<void>;
   selectedDepth: number;
   setSelectedDepth: (depth: number) => void;
@@ -64,59 +77,102 @@ interface OceanContextType {
 const OceanContext = createContext<OceanContextType | undefined>(undefined);
 
 export const OceanProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [selectedLocation, setSelectedLocation] = useState<LocationKey>('arabian_sea');
+  const [selectedLocation, setSelectedLocationState] = useState<LocationKey>('arabian_sea');
   const [selectedParameter, setSelectedParameter] = useState<ParameterType>('sst');
   const [activePage, setActivePage] = useState<PageType>('overview');
-  const [isDemoMode, setIsDemoMode] = useState<boolean>(true);
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
   const [selectedDepth, setSelectedDepth] = useState<number>(200);
+  const [modelInputs, setModelInputs] = useState<ModelInputValues>(() => getDefaultModelInputs(LOCATION_DETAILS.arabian_sea));
 
-  const [predictionData, setPredictionData] = useState<DepthPoint[]>(() => 
-    getInitialPredictionData('arabian_sea')
+  const [predictionData, setPredictionData] = useState<DepthPoint[]>(() =>
+    isDemoMode ? getInitialPredictionData('arabian_sea') : []
   );
 
   const [isPredicting, setIsPredicting] = useState<boolean>(false);
   const [predictionStep, setPredictionStep] = useState<number>(0);
   const [predictionMessage, setPredictionMessage] = useState<string>('');
+  const [predictionError, setPredictionError] = useState<string | null>(null);
+  const requestSequence = useRef(0);
+  const lastAutomaticRequest = useRef<string | null>(null);
+  const modelInputsRef = useRef(modelInputs);
+  modelInputsRef.current = modelInputs;
 
   const currentLocation = LOCATION_DETAILS[selectedLocation];
 
-  // Update prediction default profile whenever location changes
-  useEffect(() => {
-    setPredictionData(getInitialPredictionData(selectedLocation));
-  }, [selectedLocation]);
+  const setSelectedLocation = (locationKey: LocationKey) => {
+    setSelectedLocationState(locationKey);
+    setModelInputs(getDefaultModelInputs(LOCATION_DETAILS[locationKey]));
+  };
 
-  const runPrediction = async () => {
+  const executePrediction = useCallback(async (
+    locationKey: LocationKey,
+    inputs: ModelInputValues,
+    demoMode: boolean
+  ) => {
+    const sequence = ++requestSequence.current;
+    const location = LOCATION_DETAILS[locationKey];
     setIsPredicting(true);
+    setPredictionError(null);
     setPredictionStep(1);
-    
+
     try {
       const results = await predictSubsurfaceTemperature(
         {
-          sst: currentLocation.surfaceTemp,
-          sss: currentLocation.sss,
-          ssh: currentLocation.ssh,
-          chlorophyll: currentLocation.chlorophyll,
-          windSpeed: currentLocation.windSpeed,
-          latitude: currentLocation.latitude,
-          longitude: currentLocation.longitude,
+          sst: inputs.analysed_sst,
+          sss: inputs.sos,
+          ssh: location.ssh,
+          chlorophyll: location.chlorophyll,
+          windSpeed: location.windSpeed,
+          surfaceCurrent: location.surfaceCurrent,
+          modelInputs: inputs,
+          latitude: location.latitude,
+          longitude: location.longitude,
           date: new Date().toISOString().split('T')[0],
-          locationKey: selectedLocation,
+          locationKey,
         },
         (step, msg) => {
+          if (sequence !== requestSequence.current) return;
           setPredictionStep(step);
           setPredictionMessage(msg);
-        }
+        },
+        demoMode
       );
 
-      setPredictionData(results);
+      if (sequence === requestSequence.current) setPredictionData(results);
     } catch (err) {
-      console.error('Prediction failed', err);
+      if (sequence === requestSequence.current) {
+        console.error('Prediction failed', err);
+        setPredictionError(err instanceof Error ? err.message : 'Prediction failed. Check that the model API is running.');
+      }
     } finally {
+      if (sequence === requestSequence.current) {
+        setIsPredicting(false);
+        setPredictionStep(0);
+        setPredictionMessage('');
+      }
+    }
+  }, []);
+
+  const runPrediction = () => executePrediction(selectedLocation, modelInputs, isDemoMode);
+
+  useEffect(() => {
+    const requestKey = `${selectedLocation}:${isDemoMode ? 'demo' : 'live'}`;
+    if (lastAutomaticRequest.current === requestKey) return;
+    lastAutomaticRequest.current = requestKey;
+    setPredictionError(null);
+
+    if (isDemoMode) {
+      requestSequence.current += 1;
       setIsPredicting(false);
       setPredictionStep(0);
       setPredictionMessage('');
+      setPredictionData(getInitialPredictionData(selectedLocation));
+      return;
     }
-  };
+
+    setPredictionData([]);
+    void executePrediction(selectedLocation, modelInputsRef.current, false);
+  }, [selectedLocation, isDemoMode, executePrediction]);
 
   const lastUpdated = new Date().toLocaleTimeString('en-US', {
     hour: '2-digit',
@@ -130,6 +186,8 @@ export const OceanProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         selectedLocation,
         setSelectedLocation,
         currentLocation,
+        modelInputs,
+        setModelInputs,
         selectedParameter,
         setSelectedParameter,
         activePage,
@@ -140,6 +198,7 @@ export const OceanProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         isPredicting,
         predictionStep,
         predictionMessage,
+        predictionError,
         runPrediction,
         selectedDepth,
         setSelectedDepth,

@@ -22,13 +22,13 @@ export const Real2DMap: React.FC<Real2DMapProps> = ({ selectedParam = 'sst', hei
         center: [currentLocation.latitude, currentLocation.longitude],
         zoom: 5,
         zoomControl: true,
-        attributionControl: false,
       });
 
-      // CartoDB Dark Matter tile layer
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{y}/{x}{r}.png', {
+      // OpenStreetMap tiles work without a provider API key.
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
-        subdomains: 'abcd',
+        subdomains: 'abc',
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       }).addTo(map);
 
       mapInstanceRef.current = map;
@@ -128,7 +128,7 @@ export const Real2DMap: React.FC<Real2DMapProps> = ({ selectedParam = 'sst', hei
       {/* Top Map Badges */}
       <div className="absolute top-3 left-3 z-10 px-3 py-1 rounded-lg bg-[#070d1e]/90 border border-cyan-500/30 text-[10px] font-mono text-cyan-300 backdrop-blur-md flex items-center space-x-2">
         <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-        <span>LIVE SATELLITE TILES (CARTODB DARK)</span>
+        <span>OPENSTREETMAP BASEMAP</span>
       </div>
 
       <div className="absolute top-3 right-3 z-10 px-3 py-1 rounded-lg bg-[#070d1e]/90 border border-cyan-500/30 text-[10px] font-mono text-cyan-300 backdrop-blur-md">
