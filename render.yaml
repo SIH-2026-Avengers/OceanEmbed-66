@@ -1,0 +1,35 @@
+services:
+  # Python FastAPI Backend Web Service
+  - type: web
+    name: oceansat-api
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: TF_ENABLE_ONEDNN_OPTS
+        value: "0"
+      - key: TF_CPP_MIN_LOG_LEVEL
+        value: "2"
+      - key: OCEAN_CORS_ORIGINS
+        value: "*"
+
+  # Vite React Frontend Static Site
+  - type: static
+    name: oceansat-frontend
+    plan: free
+    rootDir: Frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_BASE_URL
+        fromService:
+          type: web
+          name: oceansat-api
+          property: url

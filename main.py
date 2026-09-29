@@ -89,12 +89,16 @@ def load_model() -> Any:
 
 
 app = FastAPI(title="OceanEmbed Keras Inference API", version="1.0.0")
+cors_origins_env = os.getenv("OCEAN_CORS_ORIGINS", "*")
+allow_origins = ["*"] if cors_origins_env == "*" else [o.strip() for o in cors_origins_env.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.getenv("OCEAN_CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(","),
-    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
-    allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type"],
+    allow_origins=allow_origins,
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$|^https://.*\.onrender\.com$" if "*" not in allow_origins else None,
+    allow_credentials=True if "*" not in allow_origins else False,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
@@ -147,3 +151,27 @@ def predict(request: PredictionRequest) -> dict[str, Any]:
         "depthMappingNotice": "Output channels are assigned the configured depths; verify this mapping against the model training pipeline.",
         "inputs": feature_values,
     }
+
+
+frontend_dist = Path(__file__).resolve().parent / "Frontend" / "dist"
+if frontend_dist.is_dir():
+    from fastapi.staticfiles import StaticFiles
+    from fastapi.responses import FileResponse
+    from starlette.exceptions import HTTPException as StarletteHTTPException
+
+    @app.exception_handler(StarletteHTTPException)
+    async def custom_http_exception_handler(request, exc):
+        if exc.status_code == 404 and not request.url.path.startswith("/api/"):
+            index_file = frontend_dist / "index.html"
+            if index_file.is_file():
+                return FileResponse(index_file)
+        raise exc
+
+    app.mount("/", StaticFiles(directory=str(frontend_dist), html=True), name="frontend")
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
