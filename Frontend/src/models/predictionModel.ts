@@ -120,7 +120,12 @@ export async function predictSubsurfaceTemperature(
   onProgress?.(1, 'Preparing the seven model input channels...');
   onProgress?.(2, 'Sending a 68 × 80 constant-grid prototype to the Keras API...');
 
-  const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
+  const configuredUrl = import.meta.env.VITE_API_BASE_URL;
+  const apiBaseUrl = (
+    configuredUrl !== undefined && configuredUrl !== ''
+      ? configuredUrl
+      : (import.meta.env.DEV ? 'http://127.0.0.1:8000' : '')
+  ).replace(/\/$/, '');
   let response: Response;
   try {
     response = await fetch(`${apiBaseUrl}/api/v1/predict`, {
