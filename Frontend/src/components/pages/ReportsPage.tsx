@@ -69,7 +69,7 @@ SUMMARY METRICS:
 RMSE: ${summary.rmse == null ? 'Unavailable' : `${summary.rmse} °C`}
 MAE: ${summary.mae == null ? 'Unavailable' : `${summary.mae} °C`}
 R2 Score: ${summary.r2 ?? 'Unavailable'}
-Model Confidence: ${summary.confidence == null ? 'Not provided by model' : `${summary.confidence} %`}
+Model Confidence: ${summary.confidence == null ? 'Unavailable (model has no confidence output)' : `${summary.confidence} %`}
 
 VERTICAL SUBSURFACE PROFILE (0 - 1000m):
 --------------------------------------------------------------------------------

@@ -91,7 +91,7 @@ export const SummaryPage: React.FC = () => {
           </div>
           <div>
             <div className="text-xs text-slate-400 uppercase font-mono">Model Confidence</div>
-            <div className="text-2xl font-extrabold text-white font-mono">{summary.confidence == null ? 'Not provided' : `${summary.confidence} %`}</div>
+            <div className="text-2xl font-extrabold text-white font-mono">{summary.confidence == null ? 'Unavailable' : `${summary.confidence} %`}</div>
           </div>
         </div>
 

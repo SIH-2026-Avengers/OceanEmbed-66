@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { LocationKey, LocationInfo, ModelInputValues, ParameterType, DepthPoint } from '../types/ocean';
 import { getInitialPredictionData, predictSubsurfaceTemperature } from '../models/predictionModel';
 
@@ -77,7 +77,7 @@ interface OceanContextType {
 const OceanContext = createContext<OceanContextType | undefined>(undefined);
 
 export const OceanProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [selectedLocation, setSelectedLocation] = useState<LocationKey>('arabian_sea');
+  const [selectedLocation, setSelectedLocationState] = useState<LocationKey>('arabian_sea');
   const [selectedParameter, setSelectedParameter] = useState<ParameterType>('sst');
   const [activePage, setActivePage] = useState<PageType>('overview');
   const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
@@ -92,56 +92,87 @@ export const OceanProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [predictionStep, setPredictionStep] = useState<number>(0);
   const [predictionMessage, setPredictionMessage] = useState<string>('');
   const [predictionError, setPredictionError] = useState<string | null>(null);
+  const requestSequence = useRef(0);
+  const lastAutomaticRequest = useRef<string | null>(null);
+  const modelInputsRef = useRef(modelInputs);
+  modelInputsRef.current = modelInputs;
 
   const currentLocation = LOCATION_DETAILS[selectedLocation];
 
-  // Update prediction default profile whenever location changes
-  useEffect(() => {
-    setPredictionError(null);
-    setPredictionData(isDemoMode ? getInitialPredictionData(selectedLocation) : []);
-  }, [selectedLocation, isDemoMode]);
+  const setSelectedLocation = (locationKey: LocationKey) => {
+    setSelectedLocationState(locationKey);
+    setModelInputs(getDefaultModelInputs(LOCATION_DETAILS[locationKey]));
+  };
 
-  useEffect(() => {
-    setModelInputs(getDefaultModelInputs(currentLocation));
-  }, [selectedLocation]);
-
-  const runPrediction = async () => {
+  const executePrediction = useCallback(async (
+    locationKey: LocationKey,
+    inputs: ModelInputValues,
+    demoMode: boolean
+  ) => {
+    const sequence = ++requestSequence.current;
+    const location = LOCATION_DETAILS[locationKey];
     setIsPredicting(true);
     setPredictionError(null);
     setPredictionStep(1);
-    
+
     try {
       const results = await predictSubsurfaceTemperature(
         {
-          sst: modelInputs.analysed_sst,
-          sss: modelInputs.sos,
-          ssh: currentLocation.ssh,
-          chlorophyll: currentLocation.chlorophyll,
-          windSpeed: currentLocation.windSpeed,
-          surfaceCurrent: currentLocation.surfaceCurrent,
-          modelInputs,
-          latitude: currentLocation.latitude,
-          longitude: currentLocation.longitude,
+          sst: inputs.analysed_sst,
+          sss: inputs.sos,
+          ssh: location.ssh,
+          chlorophyll: location.chlorophyll,
+          windSpeed: location.windSpeed,
+          surfaceCurrent: location.surfaceCurrent,
+          modelInputs: inputs,
+          latitude: location.latitude,
+          longitude: location.longitude,
           date: new Date().toISOString().split('T')[0],
-          locationKey: selectedLocation,
+          locationKey,
         },
         (step, msg) => {
+          if (sequence !== requestSequence.current) return;
           setPredictionStep(step);
           setPredictionMessage(msg);
         },
-        isDemoMode
+        demoMode
       );
 
-      setPredictionData(results);
+      if (sequence === requestSequence.current) setPredictionData(results);
     } catch (err) {
-      console.error('Prediction failed', err);
-      setPredictionError(err instanceof Error ? err.message : 'Prediction failed. Check that the model API is running.');
+      if (sequence === requestSequence.current) {
+        console.error('Prediction failed', err);
+        setPredictionError(err instanceof Error ? err.message : 'Prediction failed. Check that the model API is running.');
+      }
     } finally {
+      if (sequence === requestSequence.current) {
+        setIsPredicting(false);
+        setPredictionStep(0);
+        setPredictionMessage('');
+      }
+    }
+  }, []);
+
+  const runPrediction = () => executePrediction(selectedLocation, modelInputs, isDemoMode);
+
+  useEffect(() => {
+    const requestKey = `${selectedLocation}:${isDemoMode ? 'demo' : 'live'}`;
+    if (lastAutomaticRequest.current === requestKey) return;
+    lastAutomaticRequest.current = requestKey;
+    setPredictionError(null);
+
+    if (isDemoMode) {
+      requestSequence.current += 1;
       setIsPredicting(false);
       setPredictionStep(0);
       setPredictionMessage('');
+      setPredictionData(getInitialPredictionData(selectedLocation));
+      return;
     }
-  };
+
+    setPredictionData([]);
+    void executePrediction(selectedLocation, modelInputsRef.current, false);
+  }, [selectedLocation, isDemoMode, executePrediction]);
 
   const lastUpdated = new Date().toLocaleTimeString('en-US', {
     hour: '2-digit',

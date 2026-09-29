@@ -61,6 +61,9 @@ export const OverviewPage: React.FC = () => {
     Number(depthInterval)
   );
   const availableMaximumDepth = predictionData.length ? Math.max(...predictionData.map((point) => point.depth)) : 0;
+  const averageConfidence = predictionData.length > 0 && predictionData.every((point) => point.confidence != null)
+    ? predictionData.reduce((total, point) => total + (point.confidence ?? 0), 0) / predictionData.length
+    : null;
 
   // Handle location switch
   const handleSelectLocation = (locKey: LocationKey) => {
@@ -552,6 +555,11 @@ export const OverviewPage: React.FC = () => {
               {/* Chart area */}
               {activeTab === 'profile' ? (
                 <div className="h-[380px] w-full pt-2">
+                  {displayPredictionData.length === 0 ? (
+                    <div role="status" className="h-full flex items-center justify-center text-sm text-slate-400">
+                      {isPredicting ? predictionMessage || 'Running model...' : predictionError || 'No prediction data available.'}
+                    </div>
+                  ) : (
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart
                       data={displayPredictionData}
@@ -620,6 +628,7 @@ export const OverviewPage: React.FC = () => {
                       />
                     </LineChart>
                   </ResponsiveContainer>
+                  )}
                 </div>
               ) : (
                 <div className="overflow-x-auto h-[380px]">
@@ -633,12 +642,15 @@ export const OverviewPage: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800">
+                      {displayPredictionData.length === 0 && (
+                        <tr><td colSpan={4} className="p-4 text-center text-slate-400">{isPredicting ? 'Running model...' : predictionError || 'No prediction data available.'}</td></tr>
+                      )}
                       {displayPredictionData.map((row) => (
                         <tr key={row.depth} className="hover:bg-cyan-950/20 text-slate-300">
                           <td className="p-2.5 text-cyan-400 font-bold">{row.depth} m</td>
                           <td className="p-2.5 text-emerald-400 font-bold">{row.predictedTemp}{isDemoMode ? ' °C' : ''}</td>
                           <td className="p-2.5 text-amber-300">{row.argoTemp == null ? 'N/A' : `${row.argoTemp} °C`}</td>
-                          <td className="p-2.5 text-cyan-300">{row.confidence == null ? 'Not provided' : `${row.confidence}%`}</td>
+                          <td className="p-2.5 text-cyan-300">{row.confidence == null ? 'Unavailable' : `${row.confidence}%`}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -679,6 +691,9 @@ export const OverviewPage: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60">
+                    {displayPredictionData.length === 0 && (
+                      <tr><td colSpan={2} className="py-3 px-2 text-center text-slate-400">{isPredicting ? 'Running model...' : predictionError || 'No prediction data available.'}</td></tr>
+                    )}
                     {displayPredictionData.map((row) => (
                       <tr key={row.depth} className="hover:bg-cyan-950/20 text-slate-200">
                         <td className="py-1.5 px-2 text-cyan-400">{row.depth}</td>
@@ -697,23 +712,20 @@ export const OverviewPage: React.FC = () => {
               </div>
 
               <div className="text-2xl font-extrabold text-cyan-300 font-mono">
-                {predictionData.length > 0 && predictionData.every((point) => point.confidence != null)
-                  ? `${(predictionData.reduce((total, point) => total + (point.confidence ?? 0), 0) / predictionData.length).toFixed(1)} %`
-                  : 'Not provided'}
+                {averageConfidence == null ? 'Unavailable' : `${averageConfidence.toFixed(1)} %`}
               </div>
 
-              {/* Progress bar */}
-              <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-cyan-400 to-emerald-400 shadow-[0_0_10px_rgba(0,240,255,0.6)]"
-                  style={{ width: predictionData.length > 0 && predictionData.every((point) => point.confidence != null)
-                    ? `${predictionData.reduce((total, point) => total + (point.confidence ?? 0), 0) / predictionData.length}%`
-                    : '0%' }}
-                />
-              </div>
+              {averageConfidence != null && (
+                <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-cyan-400 to-emerald-400 shadow-[0_0_10px_rgba(0,240,255,0.6)]"
+                    style={{ width: `${averageConfidence}%` }}
+                  />
+                </div>
+              )}
 
               <p className="text-[10px] text-slate-400">
-                This Keras model returns seven value channels and no confidence score.
+                This model does not return a calibrated confidence score.
               </p>
             </div>
 

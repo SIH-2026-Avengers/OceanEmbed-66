@@ -1,21 +1,30 @@
 # OceanSat-66
 OceanEmbed - Satellite Embedding-Based Deep Learning Framework for Reconstruction of Subsurface Ocean Temperature from Surface Satellite Observations.
 
-## Run the Keras API
+## Setup (once)
 
-Use Python 3.11, 3.12, or 3.13 for the TensorFlow dependency. From the repository root on Windows (change `3.13` to the version installed):
+Use Python 3.11, 3.12, or 3.13 for TensorFlow. From the repository root on Windows:
 
 ```powershell
 py -3.13 -m venv .venv313
 .venv313\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
-uvicorn main:app --reload --port 8000
+npm ci --prefix Frontend
 ```
 
-Then start the frontend from `Frontend` with `npm install` and `npm run dev`. In the website header, switch from **DEMO MODE** to **LIVE MODEL**, then run a prediction. The API defaults to `http://localhost:8000`; set `Frontend/.env` to override it:
+## Daily startup
+
+From the repository root, activate the Python environment and run the frontend command. It starts the Python API, waits for its health endpoint, then starts Vite on port 3000. Press Ctrl+C to stop both services. Dependencies are installed once above; `package-lock.json` keeps frontend installs reproducible.
+
+```powershell
+.venv313\Scripts\Activate.ps1
+npm --prefix Frontend run dev
+```
+
+The API defaults to `http://127.0.0.1:8000`; set `Frontend/.env` to override it:
 
 ```dotenv
-VITE_API_BASE_URL=http://localhost:8000
+VITE_API_BASE_URL=http://127.0.0.1:8000
 ```
 
 ## Model Interface

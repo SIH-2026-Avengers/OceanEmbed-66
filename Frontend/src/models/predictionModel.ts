@@ -120,18 +120,23 @@ export async function predictSubsurfaceTemperature(
   onProgress?.(1, 'Preparing the seven model input channels...');
   onProgress?.(2, 'Sending a 68 × 80 constant-grid prototype to the Keras API...');
 
-  const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000').replace(/\/$/, '');
-  const response = await fetch(`${apiBaseUrl}/api/v1/predict`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      locationKey: inputData.locationKey,
-      latitude: inputData.latitude,
-      longitude: inputData.longitude,
-      date: inputData.date,
-      inputs: inputData.modelInputs,
-    }),
-  });
+  const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
+  let response: Response;
+  try {
+    response = await fetch(`${apiBaseUrl}/api/v1/predict`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        locationKey: inputData.locationKey,
+        latitude: inputData.latitude,
+        longitude: inputData.longitude,
+        date: inputData.date,
+        inputs: inputData.modelInputs,
+      }),
+    });
+  } catch {
+    throw new Error(`Cannot reach the model API at ${apiBaseUrl}. Start the app with "npm --prefix Frontend run dev".`);
+  }
 
   const result = await response.json();
   if (!response.ok) {
